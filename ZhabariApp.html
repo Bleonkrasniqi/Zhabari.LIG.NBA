@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zhabari League – Game Night</title>
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,0.12);
+      --glass-brd: rgba(255,255,255,0.35);
+      --text: #ffffff;
+      --accent: #ff7b00;
+    }
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans", "Liberation Sans", sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+        url("https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1600&auto=format&fit=crop") center/cover fixed no-repeat; /* Arenë basketbolli */
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    /* ---------- GLASS ---------- */
+    .glass{
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-brd);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .gbtn{
+      padding:12px 16px; border-radius:16px; border:1px solid var(--glass-brd);
+      background: var(--glass-bg); color: var(--text); font-weight: 700; cursor:pointer;
+      transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
+    }
+    .gbtn:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.2); box-shadow:0 8px 20px rgba(0,0,0,0.25); }
+    .gbtn:active{ transform: translateY(0); }
+
+    /* ---------- LOADER ---------- */
+    #loader{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; z-index:9999; }
+    .ball{ width:110px; height:110px; border-radius:50%; position:relative; background: radial-gradient(circle at 30% 30%, #ff9033, #b24a00 70%);
+      box-shadow: 0 0 40px rgba(255,120,0,.6), inset -10px -10px 30px rgba(0,0,0,.35);
+      animation: bounce 1.2s infinite ease-in-out, spin 2.2s infinite linear;}
+    /* Kreshtat e topit – 4 vija */
+    .ball:before, .ball:after{ content:""; position:absolute; inset:0; border-radius:50%; }
+    .ball:before{ /* vijë vertikale */
+      background:
+        radial-gradient(circle at 50% 50%, transparent 44%, black 46% 54%, transparent 56%),
+        linear-gradient(black, black);
+      background-size:100% 100%, 4px 100%;
+      background-position:center; background-repeat:no-repeat;
+    }
+    .ball:after{ /* vija horizontale + harku */
+      background:
+        radial-gradient(circle at 50% 50%, transparent 44%, black 46% 54%, transparent 56%),
+        linear-gradient(black, black);
+      background-size:100% 100%, 100% 4px;
+      background-position:center; background-repeat:no-repeat;
+      -webkit-mask:
+        radial-gradient(ellipse 80% 50% at 50% 50%, #000 98%, transparent 99%),
+        radial-gradient(ellipse 50% 80% at 50% 50%, #000 98%, transparent 99%);
+      mask:
+        radial-gradient(ellipse 80% 50% at 50% 50%, #000 98%, transparent 99%),
+        radial-gradient(ellipse 50% 80% at 50% 50%, #000 98%, transparent 99%);
+    }
+    @keyframes bounce{ 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(-120px) } }
+    @keyframes spin{ to{ transform: rotate(360deg) } }
+
+    /* ---------- LAYOUT ---------- */
+    header{
+      position:sticky; top:0; z-index:10; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+      background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.15)); border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .logoBox{ width:42px; height:42px; border-radius:14px; background:#0b0b0b; display:grid; place-items:center; font-weight:800; letter-spacing:.5px; }
+
+    .container{ max-width:1100px; margin:0 auto; padding:20px; }
+
+    /* ---------- LOGIN ---------- */
+    #loginPage{ display:none; width:min(420px, 92vw); margin:7vh auto; padding:28px; text-align:center; }
+    #loginPage h2{ margin:0 0 14px 0; }
+    .inpt{ width:100%; padding:12px 14px; margin:8px 0; border-radius:12px; border:1px solid var(--glass-brd); background: rgba(0,0,0,.25); color:#fff; }
+    .err{ color:#ff6b6b; display:none; font-size:14px; }
+
+    /* ---------- APP ---------- */
+    #mainApp{ display:none; }
+    .selectRow{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+    .teamChip{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:16px; border:1px solid var(--glass-brd); background: rgba(255,255,255,.08); min-width:210px; }
+    .teamChip img{ width:34px; height:34px; }
+    .fadeIn{ animation: fadeIn .4s ease both; }
+    @keyframes fadeIn{ from{ opacity:0; transform: translateY(8px)} to{opacity:1; transform:none} }
+
+    /* ---------- MODAL ZGJEDHJE EKIPI ---------- */
+    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.55); backdrop-filter: blur(6px); z-index:50; }
+    .modalContent{ width:min(1000px, 94vw); padding:22px; }
+    .teamsGrid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:14px; }
+    .teamCard{ text-align:center; padding:14px; border-radius:16px; border:1px solid var(--glass-brd); background: rgba(255,255,255,.12); cursor:pointer; transition: transform .15s ease, background .2s; }
+    .teamCard:hover{ transform: translateY(-3px); background: rgba(255,255,255,.22); }
+    .teamCard img{ width:70px; height:70px; }
+
+    /* ---------- SCOREBOARD ---------- */
+    .scoreWrap{ margin-top:16px; padding:16px; }
+    table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:16px; }
+    th, td{ padding:14px; border-bottom:1px solid rgba(255,255,255,.12); text-align:center; }
+    thead th{ background: rgba(255,255,255,.08); }
+    tbody tr{ background: rgba(0,0,0,.18); }
+    tbody tr + tr{ border-top:1px solid rgba(255,255,255,.08); }
+
+    .controls{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .split{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+
+    /* ---------- NAV STATS pas 4 lojërave ---------- */
+    .statPill{ padding:10px 14px; border-radius:999px; border:1px solid var(--glass-brd); background: rgba(255,255,255,.08); cursor:pointer; }
+
+    /* ---------- SLIDE MODALS for Wins/Losses ---------- */
+    .sheet{ position:fixed; top:0; right:0; width:min(400px, 92vw); height:100vh; transform: translateX(105%); transition: transform .25s ease; z-index:60; }
+    .sheet.open{ transform: translateX(0); }
+
+  </style>
+</head>
+<body>
+  <!-- LOADER -->
+  <div id="loader"><div class="ball"></div></div>
+
+  <header>
+    <div class="brand">
+      <div class="logoBox glass">BB</div>
+      <div>
+        <div style="font-weight:800; letter-spacing:.5px">Zhabari League</div>
+        <div style="opacity:.7; font-size:12px">Game Night – PS5 NBA</div>
+      </div>
+    </div>
+    <div id="navStats" style="display:none; gap:8px; align-items:center" class="selectRow">
+      <div class="statPill glass" onclick="openSheet('wins')">🏆 Fitoret: <b id="winsCount">0</b></div>
+      <div class="statPill glass" onclick="openSheet('losses')">📉 Humbjet: <b id="lossesCount">0</b></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- LOGIN -->
+    <section id="loginPage" class="glass fadeIn">
+      <h2>Kyçu</h2>
+      <input id="username" class="inpt" placeholder="Username" autocomplete="off" />
+      <input id="password" type="password" class="inpt" placeholder="Password" />
+      <button class="gbtn" onclick="login()">Hyr</button>
+      <div id="loginError" class="err">Kredenciale të pasakta</div>
+    </section>
+
+    <!-- APP -->
+    <section id="mainApp" class="fadeIn">
+      <div class="glass" style="padding:18px;">
+        <h2 style="margin:0 0 10px 0">Zgjedh ekipet</h2>
+        <div class="selectRow">
+          <button class="gbtn" onclick="openModal('home')">🏠 Zgjidh Home</button>
+          <div id="homeChip" class="teamChip glass" style="display:none"></div>
+          <button class="gbtn" onclick="openModal('away')">✈️ Zgjidh Away</button>
+          <div id="awayChip" class="teamChip glass" style="display:none"></div>
+          <button id="startBtn" class="gbtn" onclick="startGame()" disabled>▶️ Start Game</button>
+        </div>
+      </div>
+
+      <div id="controlsWrap" class="glass fadeIn" style="padding:18px; margin-top:14px; display:none">
+        <h3 style="margin-top:0">Kontrolla Live</h3>
+        <div class="split">
+          <div>
+            <div style="font-weight:700; margin-bottom:6px" id="homeName">Home</div>
+            <div class="controls">
+              <button class="gbtn" onclick="addPoints('home',2)">+2</button>
+              <button class="gbtn" onclick="addPoints('home',3)">+3</button>
+              <button class="gbtn" onclick="addFaul('home')">Faul</button>
+              <button class="gbtn" onclick="addTimeout('home')">Timeout</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:700; margin-bottom:6px" id="awayName">Away</div>
+            <div class="controls">
+              <button class="gbtn" onclick="addPoints('away',2)">+2</button>
+              <button class="gbtn" onclick="addPoints('away',3)">+3</button>
+              <button class="gbtn" onclick="addFaul('away')">Faul</button>
+              <button class="gbtn" onclick="addTimeout('away')">Timeout</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+          <button class="gbtn" onclick="resetScores()">🔄 Reset Pikët</button>
+          <button class="gbtn" onclick="endGame()">✅ Mbyll Ndeshjen</button>
+        </div>
+      </div>
+
+      <div id="scoreWrap" class="scoreWrap glass" style="display:none"></div>
+    </section>
+  </main>
+
+  <!-- MODAL ZGJEDHJE EKIPI -->
+  <div id="teamModal" class="modal">
+    <div class="modalContent glass fadeIn">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px">
+        <h3 style="margin:0">Zgjidh ekipin</h3>
+        <button class="gbtn" onclick="closeModal()">Mbyll</button>
+      </div>
+      <div id="teamsGrid" class="teamsGrid"></div>
+    </div>
+  </div>
+
+  <!-- SHEETS për fitore/humbje -->
+  <div id="winsSheet" class="sheet">
+    <div class="glass" style="height:100%; padding:16px; overflow:auto">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h3 style="margin:0">🏆 Fitoret</h3>
+        <button class="gbtn" onclick="closeSheet('wins')">Mbyll</button>
+      </div>
+      <div id="winsList"></div>
+    </div>
+  </div>
+  <div id="lossesSheet" class="sheet">
+    <div class="glass" style="height:100%; padding:16px; overflow:auto">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h3 style="margin:0">📉 Humbjet</h3>
+        <button class="gbtn" onclick="closeSheet('losses')">Mbyll</button>
+      </div>
+      <div id="lossesList"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------------- NBA TEAMS (30) me logo zyrtare CDN ----------------
+    const NBA_TEAMS = [
+      {name:"Hawks", id:"1610612737"},
+      {name:"Celtics", id:"1610612738"},
+      {name:"Nets", id:"1610612751"},
+      {name:"Hornets", id:"1610612766"},
+      {name:"Bulls", id:"1610612741"},
+      {name:"Cavaliers", id:"1610612739"},
+      {name:"Mavericks", id:"1610612742"},
+      {name:"Nuggets", id:"1610612743"},
+      {name:"Pistons", id:"1610612765"},
+      {name:"Warriors", id:"1610612744"},
+      {name:"Rockets", id:"1610612745"},
+      {name:"Pacers", id:"1610612754"},
+      {name:"Clippers", id:"1610612746"},
+      {name:"Lakers", id:"1610612747"},
+      {name:"Grizzlies", id:"1610612763"},
+      {name:"Heat", id:"1610612748"},
+      {name:"Bucks", id:"1610612749"},
+      {name:"Timberwolves", id:"1610612750"},
+      {name:"Pelicans", id:"1610612740"},
+      {name:"Knicks", id:"1610612752"},
+      {name:"Thunder", id:"1610612760"},
+      {name:"Magic", id:"1610612753"},
+      {name:"76ers", id:"1610612755"},
+      {name:"Suns", id:"1610612756"},
+      {name:"Trail Blazers", id:"1610612757"},
+      {name:"Kings", id:"1610612758"},
+      {name:"Spurs", id:"1610612759"},
+      {name:"Raptors", id:"1610612761"},
+      {name:"Jazz", id:"1610612762"},
+      {name:"Wizards", id:"1610612764"},
+    ].map(t => ({...t, logo:`https://cdn.nba.com/logos/nba/${t.id}/primary/L/logo.svg`}));
+
+    // ---------------- STATE ----------------
+    let selecting = null; // 'home' | 'away'
+    let currentGame = null;
+    let games = JSON.parse(localStorage.getItem('zl:games')||'[]'); // historiku i ndeshjeve
+    let totals = JSON.parse(localStorage.getItem('zl:totals')||'{}'); // { TEAMNAME: {w:0,l:0} }
+
+    // ---------------- LOADER ----------------
+    window.addEventListener('load', () => {
+      setTimeout(()=>{
+        document.getElementById('loader').style.display='none';
+        document.getElementById('loginPage').style.display='block';
+      }, 1400);
+      // pregatite modal grid
+      buildTeamsGrid();
+      updateNavStats();
+      if(games.length>=4){ document.getElementById('navStats').style.display='flex'; }
+    });
+
+    // ---------------- LOGIN ----------------
+    function login(){
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      if(u==='ZhabariLIG' && p==='12345678'){
+        document.getElementById('loginPage').style.display='none';
+        document.getElementById('mainApp').style.display='block';
+      } else {
+        const e = document.getElementById('loginError');
+        e.style.display='block'; e.classList.add('fadeIn');
+      }
+    }
+
+    // ---------------- TEAM MODAL ----------------
+    function buildTeamsGrid(){
+      const grid = document.getElementById('teamsGrid');
+      grid.innerHTML='';
+      NBA_TEAMS.forEach(t => {
+        const card = document.createElement('div');
+        card.className='teamCard glass';
+        card.innerHTML = `<img src="${t.logo}" alt="${t.name}"><div style="margin-top:8px; font-weight:700">${t.name}</div>`;
+        card.onclick = ()=> selectTeam(t);
+        grid.appendChild(card);
+      })
+    }
+    function openModal(type){ selecting = type; document.getElementById('teamModal').style.display='flex'; }
+    function closeModal(){ document.getElementById('teamModal').style.display='none'; selecting=null; }
+    function selectTeam(team){
+      const chip = document.getElementById((selecting==='home'?'home':'away')+'Chip');
+      chip.style.display='flex';
+      chip.innerHTML = `<img src="${team.logo}" alt="${team.name}"><div><div style="font-weight:800">${team.name}</div><div style="opacity:.7; font-size:12px">Zgjedhur si ${selecting==='home'?'Home':'Away'}</div></div>`;
+      chip.dataset.teamName = team.name;
+      chip.dataset.teamLogo = team.logo;
+      closeModal();
+      // enable start if both chosen
+      const hc = document.getElementById('homeChip').dataset.teamName;
+      const ac = document.getElementById('awayChip').dataset.teamName;
+      document.getElementById('startBtn').disabled = !(hc && ac && hc!==ac);
+    }
+
+    // ---------------- GAME FLOW ----------------
+    function startGame(){
+      const hc = document.getElementById('homeChip');
+      const ac = document.getElementById('awayChip');
+      if(!hc.dataset.teamName || !ac.dataset.teamName || hc.dataset.teamName===ac.dataset.teamName){ return; }
+      currentGame = {
+        home: hc.dataset.teamName, homeLogo: hc.dataset.teamLogo,
+        away: ac.dataset.teamName, awayLogo: ac.dataset.teamLogo,
+        homeScore:0, awayScore:0,
+        homeFaul:0, awayFaul:0,
+        homeTO:0, awayTO:0,
+        startedAt: Date.now()
+      };
+      document.getElementById('controlsWrap').style.display='block';
+      document.getElementById('scoreWrap').style.display='block';
+      document.getElementById('homeName').innerText = currentGame.home;
+      document.getElementById('awayName').innerText = currentGame.away;
+      renderScore();
+      scrollToScore();
+    }
+
+    function addPoints(side, pts){ if(!currentGame) return; currentGame[side+"Score"] += pts; renderScore(); }
+    function addFaul(side){ if(!currentGame) return; currentGame[side+"Faul"]++; renderScore(); }
+    function addTimeout(side){ if(!currentGame) return; currentGame[side+"TO"]++; renderScore(); }
+    function resetScores(){ if(!currentGame) return; currentGame.homeScore=0; currentGame.awayScore=0; renderScore(); }
+
+    function renderScore(){
+      const s = currentGame;
+      const html = `
+      <div class="fadeIn">
+        <h3 style="margin:4px 0 10px 0">Rezultati live</h3>
+        <table class="glass">
+          <thead><tr><th>Home</th><th>Away</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>
+                <img src="${s.homeLogo}" width="64" height="64" alt="${s.home}"><div style="font-weight:800">${s.home}</div>
+                <div style="font-size:28px; font-weight:800; margin-top:6px">${s.homeScore}</div>
+                <div style="opacity:.8">Faul: ${s.homeFaul} • TO: ${s.homeTO}</div>
+              </td>
+              <td>
+                <img src="${s.awayLogo}" width="64" height="64" alt="${s.away}"><div style="font-weight:800">${s.away}</div>
+                <div style="font-size:28px; font-weight:800; margin-top:6px">${s.awayScore}</div>
+                <div style="opacity:.8">Faul: ${s.awayFaul} • TO: ${s.awayTO}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+      document.getElementById('scoreWrap').innerHTML = html;
+    }
+
+    function endGame(){
+      if(!currentGame) return;
+      const g = {...currentGame, endedAt: Date.now()};
+      games.push(g);
+      const winner = g.homeScore===g.awayScore ? null : (g.homeScore>g.awayScore? g.home : g.away);
+      if(winner){
+        totals[winner] = totals[winner] || {w:0,l:0,logo: (winner===g.home? g.homeLogo: g.awayLogo)};
+        totals[winner].w++;
+        const loser = winner===g.home? g.away: g.home;
+        totals[loser] = totals[loser] || {w:0,l:0,logo: (loser===g.home? g.homeLogo: g.awayLogo)};
+        totals[loser].l++;
+      }
+      persist();
+      // reset UI për match të radhës
+      currentGame=null;
+      document.getElementById('controlsWrap').style.display='none';
+      document.getElementById('scoreWrap').innerHTML = '<div class="glass" style="padding:14px">Ndeshja u ruajt ✅ – zgjidh ekipet për lojën tjetër.</div>';
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('homeChip').style.display='none';
+      document.getElementById('awayChip').style.display='none';
+      updateNavStats();
+     document.getElementById('navStats').style.display='flex';
+      scrollToTop();
+    }
+
+    function persist(){
+      localStorage.setItem('zl:games', JSON.stringify(games));
+      localStorage.setItem('zl:totals', JSON.stringify(totals));
+    }
+
+    function updateNavStats(){
+      let w=0,l=0; Object.values(totals).forEach(t=>{ w+=t.w; l+=t.l; });
+      document.getElementById('winsCount').innerText = w;
+      document.getElementById('lossesCount').innerText = l;
+      // ndërtim listash
+      const sortedW = Object.entries(totals).sort((a,b)=> (b[1].w)-(a[1].w));
+      const sortedL = Object.entries(totals).sort((a,b)=> (b[1].l)-(a[1].l));
+      document.getElementById('winsList').innerHTML = sortedW.map(([name, t])=> rowStat(name, t.logo, t.w, 'w')).join('') || emptyNote();
+      document.getElementById('lossesList').innerHTML = sortedL.map(([name, t])=> rowStat(name, t.logo, t.l, 'l')).join('') || emptyNote();
+    }
+
+    function rowStat(name, logo, val, kind){
+      return `<div class="glass fadeIn" style="display:flex; align-items:center; gap:10px; padding:10px; margin-bottom:8px">
+        <img src="${logo}" width="36" height="36" alt="${name}">
+        <div style="flex:1">
+          <div style="font-weight:800">${name}</div>
+          <div style="opacity:.75; font-size:12px">${kind==='w'?'Fitore':'Humbje'}</div>
+        </div>
+        <div style="font-size:24px; font-weight:900">${val}</div>
+      </div>`
+    }
+    function emptyNote(){ return '<div class="glass" style="padding:12px">Ende s’ka të dhëna.</div>'; }
+
+    function openSheet(which){ document.getElementById((which==='wins'?'winsSheet':'lossesSheet')).classList.add('open'); }
+    function closeSheet(which){ document.getElementById((which==='wins'?'winsSheet':'lossesSheet')).classList.remove('open'); }
+
+    // helpers
+    function scrollToScore(){ document.getElementById('scoreWrap').scrollIntoView({behavior:'smooth'}); }
+    function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
+  </script>
+</body>
+</html>
